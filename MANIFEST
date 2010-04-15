@@ -11,4 +11,5 @@ t/dumper.t
 t/freezer.t
 t/overload.t
 t/pair.t
+t/terse.t
 Todo
