@@ -6,6 +6,32 @@ HISTORY - public release history for Data::Dumper
 
 =over 8
 
+=item 2.130_03 (May 20 2011)
+
+Essentially the same as version 2.130_02, but a CPAN release
+for the eventual 2.131.
+
+=item 2.130_02
+
+This was only shipped with the perl core, never released to CPAN.
+
+Convert overload.t to Test::More
+
+Fix some spelling errors
+
+Fix some compiler warnings
+
+Fix an out of bounds write in Data-Dumper with malformed utf8 input
+
+=item 2.130 (Nov 20 2010)
+
+C<Dumpxs> can now handle malformed UTF-8.
+
+=item 2.129 (Oct 20 2010)
+
+C<Dumpxs> no longer crashes with globs returned by C<*$io_ref>
+[perl #72332].
+
 =item 2.128 (Sep 10 2010)
 
 Promote previous release to stable version with the correct version.
