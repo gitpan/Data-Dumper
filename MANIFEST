@@ -11,6 +11,8 @@ t/freezer.t
 t/overload.t
 t/pair.t
 t/perl-74170.t
+t/qr.t
 t/terse.t
 Todo
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)

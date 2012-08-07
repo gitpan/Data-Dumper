@@ -10,7 +10,7 @@
 package Data::Dumper;
 
 BEGIN {
-    $VERSION = '2.135_02'; # Don't forget to set version and release
+    $VERSION = '2.135_07'; # Don't forget to set version and release
 }			   # date in POD!
 
 #$| = 1;
@@ -31,9 +31,10 @@ BEGIN {
     # toggled on load failure.
     eval {
 	require XSLoader;
+	XSLoader::load( 'Data::Dumper' );
+	1
     }
-    ? XSLoader::load( 'Data::Dumper' )
-    : ($Useperl = 1);
+    or $Useperl = 1;
 }
 
 # module vars and their defaults
@@ -54,6 +55,7 @@ $Pair       = ' => '    unless defined $Pair;
 $Useperl    = 0         unless defined $Useperl;
 $Sortkeys   = 0         unless defined $Sortkeys;
 $Deparse    = 0         unless defined $Deparse;
+$Sparseseen = 0         unless defined $Sparseseen;
 
 #
 # expects an arrayref of values to be dumped.
@@ -93,6 +95,7 @@ sub new {
 	     useperl    => $Useperl,    # use the pure Perl implementation
 	     sortkeys   => $Sortkeys,   # flag or filter for sorting hash keys
 	     deparse	=> $Deparse,	# use B::Deparse for coderefs
+             noseen     => $Sparseseen, # do not populate the seen hash unless necessary
 	   };
 
   if ($Indent > 0) {
@@ -102,26 +105,39 @@ sub new {
   return bless($s, $c);
 }
 
-if ($] >= 5.008) {
-  # Packed numeric addresses take less memory. Plus pack is faster than sprintf
-  *init_refaddr_format = sub {};
+# Packed numeric addresses take less memory. Plus pack is faster than sprintf
 
-  *format_refaddr  = sub {
+# Most users of current versions of Data::Dumper will be 5.008 or later.
+# Anyone on 5.6.1 and 5.6.2 upgrading will be rare (particularly judging by
+# the bug reports from users on those platforms), so for the common case avoid
+# complexity, and avoid even compiling the unneeded code.
+
+sub init_refaddr_format {
+}
+
+sub format_refaddr {
     require Scalar::Util;
     pack "J", Scalar::Util::refaddr(shift);
-  };
-} else {
-  *init_refaddr_format = sub {
-    require Config;
-    my $f = $Config::Config{uvxformat};
-    $f =~ tr/"//d;
-    our $refaddr_format = "0x%" . $f;
-  };
+};
 
-  *format_refaddr = sub {
-    require Scalar::Util;
-    sprintf our $refaddr_format, Scalar::Util::refaddr(shift);
-  }
+if ($] < 5.008) {
+    eval <<'EOC' or die;
+    no warnings 'redefine';
+    my $refaddr_format;
+    sub init_refaddr_format {
+        require Config;
+        my $f = $Config::Config{uvxformat};
+        $f =~ tr/"//d;
+        $refaddr_format = "0x%" . $f;
+    }
+
+    sub format_refaddr {
+        require Scalar::Util;
+        sprintf $refaddr_format, Scalar::Util::refaddr(shift);
+    }
+
+    1
+EOC
 }
 
 #
@@ -372,7 +388,7 @@ sub _dump {
         } else {
             $pat = "$val";
         }
-        $pat =~ s,/,\\/,g;
+        $pat =~ s <(\\.)|/> { $1 || '\\/' }ge;
         $out .= "qr/$pat/";
     }
     elsif ($realtype eq 'SCALAR' || $realtype eq 'REF'
@@ -497,7 +513,8 @@ sub _dump {
 	$s->{seen}{$id} = ["\\$name", $ref];
       }
     }
-    if (ref($ref) eq 'GLOB' or "$ref" =~ /=GLOB\([^()]+\)$/) {  # glob
+    $ref = \$val;
+    if (ref($ref) eq 'GLOB') {  # glob
       my $name = substr($val, 1);
       if ($name =~ /^[A-Za-z_][\w:]*$/ && $name ne 'main::') {
 	$name =~ s/^main::/::/;
@@ -537,7 +554,7 @@ sub _dump {
       $out .= $v;
     }
     elsif (!defined &_vstring
-       and ref \$val eq 'VSTRING' || eval{Scalar::Util::isvstring($val)}) {
+       and ref $ref eq 'VSTRING' || eval{Scalar::Util::isvstring($val)}) {
       $out .= sprintf "%vd", $val;
     }
     elsif ($val =~ /^(?:0|-?[1-9]\d{0,8})\z/) { # safe decimal number
@@ -683,6 +700,11 @@ sub Sortkeys {
 sub Deparse {
   my($s, $v) = @_;
   defined($v) ? (($s->{'deparse'} = $v), return $s) : $s->{'deparse'};
+}
+
+sub Sparseseen {
+  my($s, $v) = @_;
+  defined($v) ? (($s->{'noseen'} = $v), return $s) : $s->{'noseen'};
 }
 
 # used by qquote below
@@ -1084,6 +1106,26 @@ XSUB implementation doesn't support it.
 Caution : use this option only if you know that your coderefs will be
 properly reconstructed by C<B::Deparse>.
 
+=item *
+
+$Data::Dumper::Sparseseen I<or>  $I<OBJ>->Sparseseen(I<[NEWVAL]>)
+
+By default, Data::Dumper builds up the "seen" hash of scalars that
+it has encountered during serialization. This is very expensive.
+This seen hash is necessary to support and even just detect circular
+references. It is exposed to the user via the C<Seen()> call both
+for writing and reading.
+
+If you, as a user, do not need explicit access to the "seen" hash,
+then you can set the C<Sparseseen> option to allow Data::Dumper
+to eschew building the "seen" hash for scalars that are known not
+to possess more than one reference. This speeds up serialization
+considerably if you use the XS implementation.
+
+Note: If you turn on C<Sparseseen>, then you must not rely on the
+content of the seen hash since its contents will be an
+implementation detail!
+
 =back
 
 =head2 Exports
@@ -1317,7 +1359,7 @@ modify it under the same terms as Perl itself.
 
 =head1 VERSION
 
-Version 2.135_02  (December 19 2011)
+Version 2.135_07  (August 20 2012)
 
 =head1 SEE ALSO
 

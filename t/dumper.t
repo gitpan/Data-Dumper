@@ -83,11 +83,11 @@ sub SKIP_TEST {
 $Data::Dumper::Useperl = 1;
 if (defined &Data::Dumper::Dumpxs) {
   print "### XS extension loaded, will run XS tests\n";
-  $TMAX = 384; $XS = 1;
+  $TMAX = 402; $XS = 1;
 }
 else {
   print "### XS extensions not loaded, will NOT run XS tests\n";
-  $TMAX = 192; $XS = 0;
+  $TMAX = 201; $XS = 0;
 }
 
 print "1..$TMAX\n";
@@ -125,6 +125,11 @@ EOT
 TEST q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6]));
 TEST q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])) if $XS;
 
+SCOPE: {
+  local $Data::Dumper::Sparseseen = 1;
+  TEST q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6]));
+  TEST q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])) if $XS;
+}
 
 ############# 7
 ##
@@ -149,6 +154,12 @@ EOT
 $Data::Dumper::Purity = 1;         # fill in the holes for eval
 TEST q(Data::Dumper->Dump([$a, $b], [qw(*a b)])); # print as @a
 TEST q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])) if $XS;
+
+SCOPE: {
+  local $Data::Dumper::Sparseseen = 1;
+  TEST q(Data::Dumper->Dump([$a, $b], [qw(*a b)])); # print as @a
+  TEST q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])) if $XS;
+}
 
 ############# 13
 ##
@@ -1477,22 +1488,22 @@ EOT
 {
   # If XS cannot load, the pure-Perl version cannot deparse vstrings with
   # underscores properly.  In 5.8.0, vstrings are just strings.
-  $WANT = $] > 5.0080001 ? $XS ? <<'EOT' : <<'EOV' : <<'EOU';
-#$a = \v65.66.67;
-#$b = \v65.66.067;
-#$c = \v65.66.6_7;
-#$d = \'ABC';
-EOT
-#$a = \v65.66.67;
-#$b = \v65.66.67;
-#$c = \v65.66.67;
-#$d = \'ABC';
-EOV
+  my $no_vstrings = <<'NOVSTRINGS';
 #$a = \'ABC';
 #$b = \'ABC';
 #$c = \'ABC';
 #$d = \'ABC';
-EOU
+NOVSTRINGS
+  my $vstrings_corr = <<'VSTRINGS_CORRECT';
+#$a = \v65.66.67;
+#$b = \v65.66.067;
+#$c = \v65.66.6_7;
+#$d = \'ABC';
+VSTRINGS_CORRECT
+  $WANT = $] <= 5.0080001
+          ? $no_vstrings
+          : $vstrings_corr;
+
   @::_v = (
     \v65.66.67,
     \($] < 5.007 ? v65.66.67 : eval 'v65.66.067'),
@@ -1501,5 +1512,21 @@ EOU
   );
   TEST q(Data::Dumper->Dump(\@::_v, [qw(a b c d)])), 'vstrings';
   TEST q(Data::Dumper->Dumpxs(\@::_v, [qw(a b c d)])), 'xs vstrings'
+    if $XS;
+}
+
+############# 384
+{
+  # [perl #107372] blessed overloaded globs
+  $WANT = <<'EOW';
+#$VAR1 = bless( \*::finkle, 'overtest' );
+EOW
+  {
+    package overtest;
+    use overload fallback=>1, q\""\=>sub{"oaoaa"};
+  }
+  TEST q(Data::Dumper->Dump([bless \*finkle, "overtest"])),
+    'blessed overloaded globs';
+  TEST q(Data::Dumper->Dumpxs([\*finkle])), 'blessed overloaded globs (xs)'
     if $XS;
 }
