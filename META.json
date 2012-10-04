@@ -34,7 +34,7 @@
          "requires" : {}
       }
    },
-   "release_status" : "testing",
+   "release_status" : "stable",
    "resources" : {
       "bugtracker" : {
          "web" : "http://rt.perl.org/perlbug/"
@@ -44,5 +44,5 @@
       },
       "x_MailingList" : "http://lists.cpan.org/showlist.cgi?name=perl5-porters"
    },
-   "version" : "2.135_07"
+   "version" : "2.136"
 }

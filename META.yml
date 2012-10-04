@@ -22,4 +22,4 @@ resources:
   bugtracker: http://rt.perl.org/perlbug/
   repository: 'git://perl5.git.perl.org/perl.git perl-git'
   x_MailingList: http://lists.cpan.org/showlist.cgi?name=perl5-porters
-version: 2.135_07
+version: 2.136
