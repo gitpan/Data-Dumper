@@ -3,10 +3,10 @@ abstract: unknown
 author:
   - unknown
 build_requires:
-  ExtUtils::MakeMaker: 0
+  Test::More: 0.60
 configure_requires:
   ExtUtils::MakeMaker: 0
-dynamic_config: 1
+dynamic_config: 0
 generated_by: 'ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.120921'
 license: unknown
 meta-spec:
@@ -22,4 +22,4 @@ resources:
   bugtracker: http://rt.perl.org/perlbug/
   repository: 'git://perl5.git.perl.org/perl.git perl-git'
   x_MailingList: http://lists.cpan.org/showlist.cgi?name=perl5-porters
-version: 2.136
+version: 2.139
