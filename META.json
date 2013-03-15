@@ -22,7 +22,7 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "Test::More" : "0.60"
+            "Test::More" : "0.98"
          }
       },
       "configure" : {
@@ -44,5 +44,5 @@
       },
       "x_MailingList" : "http://lists.cpan.org/showlist.cgi?name=perl5-porters"
    },
-   "version" : "2.143"
+   "version" : "2.145"
 }
